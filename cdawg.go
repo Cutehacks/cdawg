@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+        "strings"
 	"io/ioutil"
 	"encoding/json"
 )
@@ -57,17 +58,17 @@ func WriteSwitch(root *Node, depth int, indent string)  {
 	indent += "  "
 
 	if len(root.nodes) == 0 {
-		fmt.Println(indent + "return QPair<int, int>(0, 0); // no deeper pattern")
+		fmt.Println(indent + "return QPair<const uint *, int>(0, 0); // no deeper pattern")
 		return
 	}
 
 	if (depth == 0) {
 		fmt.Println(indent + "if (i >= length)")
-		fmt.Println(indent + "  return QPair<int, int>(0, 0);")
+		fmt.Println(indent + "  return QPair<const uint *, int>(0, 0);")
 		fmt.Println(indent + "switch (text[i].unicode()) {")
 	} else {
 		fmt.Println(indent + "if (i + " + strconv.Itoa(depth) + " >= length)")
-		fmt.Println(indent + "  return QPair<int, int>(0, 0);")
+		fmt.Println(indent + "  return QPair<const uint *, int>(0, 0);")
 		fmt.Println(indent + "switch (text[i + " + strconv.Itoa(depth) + "].unicode()) {")
 	}
 
@@ -75,8 +76,10 @@ func WriteSwitch(root *Node, depth int, indent string)  {
 		sub, _ := root.nodes[key]
 		if len(sub.value) > 0 { // we have a match
 			fmt.Println(indent + "  case " + strconv.Itoa(int(key)) + ":")
-			fmt.Println(indent + "    if (i + " + strconv.Itoa(depth + 1) + " >= length || text[i + " + strconv.Itoa(depth + 1) + "].isSpace() || text[i + " + strconv.Itoa(depth + 1) + "].isPunct())")
-			fmt.Println(indent + "      return QPair<int, int>(0x" + sub.value + ", " + strconv.Itoa(depth + 1 ) + ");" + " // " + sub.pattern + " found")
+			fmt.Println(indent + "    if (i + " + strconv.Itoa(depth + 1) + " >= length || text[i + " + strconv.Itoa(depth + 1) + "].isSpace() || text[i + " + strconv.Itoa(depth + 1) + "].isPunct()) {")
+			fmt.Println(indent + "      static const uint unicode[] = { 0x" + strings.Replace(sub.value, "-", ", 0x", -1) + ", 0 };")
+			fmt.Println(indent + "      return QPair<const uint *, int>(unicode, " + strconv.Itoa(depth + 1 ) + ");" + " // " + sub.pattern + " found")
+			fmt.Println(indent + "    }")
 			WriteSwitch(sub, depth + 1, indent + "  ")
 
 		} else { // continue searching
@@ -84,7 +87,7 @@ func WriteSwitch(root *Node, depth int, indent string)  {
 			WriteSwitch(sub, depth + 1, indent + "  ")
 		}
 	}
-	fmt.Println(indent + "  default: return QPair<int, int>(0, 0);");
+	fmt.Println(indent + "  default: return QPair<const uint *, int>(0, 0);");
 	fmt.Println(indent + "}")
 }
 
@@ -93,9 +96,9 @@ func WriteFunc(root *Node) {
 	fmt.Println("// See https://github.com/Cutehacks/cdawg\n")
 	fmt.Println("#include <QPair>")
 	fmt.Println("#include <QString>\n")
-	fmt.Println("QPair<int, int> cdawg_match(const QString &text, int length, int i)\n{")
+	fmt.Println("QPair<const uint *, int> cdawg_match(const QString &text, int length, int i)\n{")
 	WriteSwitch(root, 0, "")
-	fmt.Println("  return QPair<int, int>(0, 0);")
+	fmt.Println("  return QPair<const uint *, int>(0, 0);")
 	fmt.Println("}")
 }
 
